@@ -188,3 +188,7 @@ poetry.toml
 # Ignore all local history of files
 .history
 .ionide
+
+### Custom ###
+run
+.vscode/settings.json
