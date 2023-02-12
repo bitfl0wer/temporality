@@ -21,5 +21,5 @@ async def on_ready():
     print(f"Logged in as {bot.user}.")
 
 
-bot.load_extension("src.cog")
+bot.load_extension("src.commands.cog")
 bot.run(__token__)
