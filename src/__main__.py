@@ -1,4 +1,4 @@
-import discord, time, threading
+import discord, time, sched
 from os import environ
 from dotenv import load_dotenv
 from discord.ext import commands
@@ -9,7 +9,8 @@ from src.commands.temporality import (
 )
 
 
-def temporality_logic() -> None:
+def temporality_logic(scheduler) -> None:
+    scheduler.enter(1, 1, temporality_logic, (scheduler,))
     messages = db.query(Messages).all()
     for message in messages:
         if message.deletion_timestamp <= int(time.time()):
@@ -21,19 +22,6 @@ def temporality_logic() -> None:
             db.delete(message)
             db.commit()
     return
-
-
-def run_periodically(func, interval_seconds):
-    def run_func():
-        while True:
-            func()
-            t = threading.Timer(interval_seconds, run_func)
-            t.start()
-            t.join()
-            return
-
-    t = threading.Thread(target=run_func)
-    t.start()
 
 
 load_dotenv()
@@ -76,5 +64,5 @@ async def on_message(message: discord.message):
 
 
 bot.load_extension("src.commands.temporality")
-run_periodically(temporality_logic, 1)
+
 bot.run(__token__)
