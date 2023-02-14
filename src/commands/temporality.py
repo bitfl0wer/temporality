@@ -91,7 +91,7 @@ class Temporality(commands.Cog):
         print("Waiting...")
         await self.bot.wait_until_ready()
 
-    @slash_command(name="disappear-activate")
+    @slash_command(name="activate")
     async def temporality_setup(
         self,
         ctx: discord.ApplicationContext,
@@ -125,6 +125,37 @@ class Temporality(commands.Cog):
         await ctx.response.send_message(
             f"Disappearing messages activated for channel #{channel.name} with a timer of {time}!"
         )
+        return
+
+    @slash_command(name="deactivate")
+    async def temporality_deactivate(
+        self,
+        ctx: discord.ApplicationContext,
+        channel: Option(
+            discord.TextChannel,
+            description="The channel to deactivate automatically disappearing messages in.",
+        ),
+    ):
+        if not ctx.user.guild_permissions.manage_messages:
+            await ctx.response.send_message(
+                f"womp womp. You do not have the required `MANAGE_MESSAGES` permission.",
+                ephemeral=True,
+            )
+        channel_deactivate = db.query(Channels).filter_by(id=channel.id).one_or_none()
+        if not channel_deactivate:
+            await ctx.response.send_message(
+                "This channel does not have the temporality feature active. Did nothing.",
+                ephemeral=True,
+            )
+            return
+        await ctx.response.send_message(
+            f"Deactivated disappearing messages for channel #{channel.name}."
+        )
+        messages = db.query(Messages).all()
+        for message in messages:
+            db.delete(message)
+        db.delete(channel_deactivate)
+        db.commit()
         return
 
 
