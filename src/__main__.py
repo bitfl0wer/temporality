@@ -1,4 +1,4 @@
-import discord, time, sched
+import discord
 from os import environ
 from dotenv import load_dotenv
 from discord.ext import commands
@@ -7,22 +7,6 @@ from src.commands.temporality import (
     seperate_str_and_int,
     make_relative_timestamp,
 )
-
-
-def temporality_logic(scheduler) -> None:
-    scheduler.enter(1, 1, temporality_logic, (scheduler,))
-    messages = db.query(Messages).all()
-    for message in messages:
-        if message.deletion_timestamp <= int(time.time()):
-            channel = db.query(Channels).filter_by(id=message.channel_id).one_or_none()
-            if channel.active:
-                channel = bot.get_channel(channel.id)
-                message = channel.fetch_message(message.id)
-                message.delete()
-            db.delete(message)
-            db.commit()
-    return
-
 
 load_dotenv()
 
