@@ -3,6 +3,7 @@ from typing import List, Union
 import discord, time
 from discord.commands import Option, slash_command
 from discord.ext import commands, tasks
+from discord.errors import NotFound
 
 from src.database_handler import Channels, Messages
 from src.database_handler import session as db
@@ -74,9 +75,14 @@ class Temporality(commands.Cog):
                     db.query(Channels).filter_by(id=message.channel_id).one_or_none()
                 )
                 if channel.active:
-                    channel_fetched = self.bot.get_channel(channel.id)
-                    message_fetched = await channel_fetched.fetch_message(message.id)
-                    await message_fetched.delete()
+                    try:
+                        channel_fetched = self.bot.get_channel(channel.id)
+                        message_fetched = await channel_fetched.fetch_message(
+                            message.id
+                        )
+                        await message_fetched.delete()
+                    except NotFound:
+                        None
                 db.delete(message)
                 db.commit()
 
@@ -109,8 +115,12 @@ class Temporality(commands.Cog):
                 ephemeral=True,
             )
             return
-        db_channel = Channels(id=channel.id, timeout=time)
-        db.add(db_channel)
+        db_channel = db.query(Channels).filter_by(id=channel.id).one_or_none()
+        if not db_channel:
+            db_channel = Channels(id=channel.id, timeout=time)
+            db.add(db_channel)
+        else:
+            db_channel.timeout = time
         db.commit()
         await ctx.response.send_message(
             f"Disappearing messages activated for channel #{channel.name} with a timer of {time}!"
