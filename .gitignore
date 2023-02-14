@@ -192,3 +192,4 @@ poetry.toml
 ### Custom ###
 run
 .vscode/settings.json
+sqlite.db
