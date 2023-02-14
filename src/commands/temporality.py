@@ -2,7 +2,7 @@ from typing import List, Union
 
 import discord, time
 from discord.commands import Option, slash_command
-from discord.ext import commands
+from discord.ext import commands, tasks
 
 from src.database_handler import Channels, Messages
 from src.database_handler import session as db
@@ -59,6 +59,31 @@ def make_relative_timestamp(unit: str, time_in_future: int) -> int:
 class Temporality(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
+        self.message_cleanup.start()
+
+    def cog_unload(self) -> None:
+        self.message_cleanup.cancel()
+        return super().cog_unload()
+
+    @tasks.loop(seconds=1.0)
+    async def message_cleanup(self):
+        messages = db.query(Messages).all()
+        for message in messages:
+            if message.deletion_timestamp <= int(time.time()):
+                channel = (
+                    db.query(Channels).filter_by(id=message.channel_id).one_or_none()
+                )
+                if channel.active:
+                    channel_fetched = self.bot.get_channel(channel.id)
+                    message_fetched = await channel_fetched.fetch_message(message.id)
+                    await message_fetched.delete()
+                db.delete(message)
+                db.commit()
+
+    @message_cleanup.before_loop
+    async def before_message_cleanup(self):
+        print("Waiting...")
+        await self.bot.wait_until_ready()
 
     @slash_command(name="disappear-activate")
     async def temporality_setup(
