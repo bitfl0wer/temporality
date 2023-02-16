@@ -70,21 +70,31 @@ class Temporality(commands.Cog):
     async def message_cleanup(self):
         messages = db.query(Messages).all()
         for message in messages:
-            if message.deletion_timestamp <= int(time.time()):
-                channel = (
-                    db.query(Channels).filter_by(id=message.channel_id).one_or_none()
-                )
-                if channel.active:
-                    try:
-                        channel_fetched = self.bot.get_channel(channel.id)
-                        message_fetched = await channel_fetched.fetch_message(
-                            message.id
-                        )
-                        await message_fetched.delete()
-                    except NotFound:
-                        None
+            if not message.deletion_timestamp <= int(time.time()):
+                continue
+            channel = db.query(Channels).filter_by(id=message.channel_id).one_or_none()
+            if not channel.active:
                 db.delete(message)
                 db.commit()
+                continue
+            try:
+                channel_fetched = self.bot.get_channel(channel.id)
+                message_fetched = await channel_fetched.fetch_message(message.id)
+                reactions = message_fetched.reactions
+                if not reactions:
+                    db.delete(message)
+                    await message_fetched.delete()
+                for reaction in reactions:
+                    if reaction.emoji == "💾" and await reaction.users().get(
+                        id=message_fetched.author.id
+                    ):
+                        db.delete(message)
+                    else:
+                        db.delete(message)
+                        await message_fetched.delete()
+            except NotFound:
+                pass
+            db.commit()
 
     @message_cleanup.before_loop
     async def before_message_cleanup(self):
