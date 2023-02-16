@@ -88,11 +88,13 @@ class Temporality(commands.Cog):
                     if reaction.emoji == "💾" and await reaction.users().get(
                         id=message_fetched.author.id
                     ):
+                        await reaction.remove(message.author)
                         db.delete(message)
                     else:
                         db.delete(message)
                         await message_fetched.delete()
-            except NotFound:
+            except NotFound as e:
+                print(e)
                 pass
             db.commit()
 
